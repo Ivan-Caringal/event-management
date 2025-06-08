@@ -7,17 +7,34 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Http\Resources\EventResource;
 use App\Http\Resources\UserResource;
+use App\Http\Traits\CanLoadRelationships;
 
 
 class EventController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+     use CanLoadRelationships;
+      private array $relations = ['user', 'attendees', 'attendees.user'];
     public function index()
     {
-        return EventResource::collection(Event::with('user', 'attendees')->get());
+       
+        
+        $query = $this->loadRelationships(Event::query());
+
+        //load relationships 
+        // foreach ($relations as $relation) {
+        //     $query->when(
+        //         $this->shouldIncludeRelation($relation),
+        //         fn($q) => $q->with($relation)
+        //     );
+        // }
+        //event resource para ma customize yung output ng api
+
+        return EventResource::collection(
+             $query->latest()->paginate());
+
     }
+
+   
 
     /**
      * Store a newly created resource in storage.
@@ -34,7 +51,7 @@ class EventController extends Controller
             'user_id' => 1
         ]);
 
-         return new EventResource($event);
+         return new EventResource($this->loadRelationships($event));
     }
 
     /**
@@ -42,8 +59,7 @@ class EventController extends Controller
      */
     public function show(Event $event)
     {
-         $event->load('user', 'attendees');
-         return new EventResource($event);
+         return new EventResource($this->loadRelationships($event));
     }
 
     /**
@@ -59,7 +75,7 @@ class EventController extends Controller
                 'end_time' => 'sometimes|date|after:start_time'
             ])
         );
-         return new EventResource($event);
+        return new EventResource($this->loadRelationships($event));
     }
 
     /**
